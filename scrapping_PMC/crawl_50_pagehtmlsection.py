@@ -12,7 +12,7 @@ def crawl_pmc_articles(url, max_articles=50):
 
         while articles_collected < max_articles:
             print(f"\n--- Visiting page {page_number} ---")
-            page.goto(url + f"&page={page_number}", wait_until="domcontentloaded")
+            page.goto(url + f"&page={page_number}", wait_until="networkidle")
 
             selector = "div.docsum-wrap"  # parent div of each article
             try:
