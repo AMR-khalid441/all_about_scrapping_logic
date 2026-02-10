@@ -1,0 +1,56 @@
+from playwright.sync_api import sync_playwright
+import time
+
+def crawl_pmc_articles(url, max_articles=50):
+    with sync_playwright() as P:
+        # Launch browser
+        browser = P.chromium.launch(headless=False)
+        page = browser.new_page()
+
+        articles_collected = 0  # counter
+        page_number = 1          # current page number
+        all_texts = []           # store articles
+
+        while articles_collected < max_articles:
+            print(f"\n--- Visiting page {page_number} ---")
+            page.goto(url + f"&page={page_number}", wait_until="networkidle")
+
+            selector = "div.docsum-wrap"
+            try:
+                page.wait_for_selector(selector, timeout=20000)
+            except:
+                print("No more results found or timeout")
+                break
+
+            elements = page.query_selector_all(selector)
+            for el in elements:
+                text = el.inner_text()
+                all_texts.append(text)
+                articles_collected += 1
+                print(f"Collected article {articles_collected}")
+                if articles_collected >= max_articles:
+                    break
+
+            # If no elements found on the page, stop crawling
+            if not elements:
+                print("No more articles on this page")
+                break
+
+            page_number += 1
+            time.sleep(1)  # polite delay
+
+        # Save screenshot of last page visited
+        page.screenshot(path="example_last_page.png")
+        browser.close()
+
+        # Print first few articles to check
+        for i, text in enumerate(all_texts, 1):
+            print(f"\n--- Article {i} ---\n{text[:500]}...\n")  # print first 500 chars
+
+        print(f"\nTotal articles collected: {len(all_texts)}")
+        return all_texts
+
+
+if __name__ == "__main__":
+    url = "https://pmc.ncbi.nlm.nih.gov/search/?term=mental+health"
+    articles = crawl_pmc_articles(url, max_articles=50)
